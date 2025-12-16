@@ -9,49 +9,20 @@
         :root { --primary: #00a884; --primary-dark: #007a5e; --accent: #25d366; --dark: #0f172a; --gray: #64748b; --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); --danger: #ef4444; --warning: #f59e0b; }
         body { font-family: 'Cairo', sans-serif; background: var(--bg-gradient); margin: 0; padding-bottom: 90px; color: var(--dark); min-height: 100vh; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
         * { box-sizing: border-box; outline: none; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        a { text-decoration: none; color: inherit; }
         
-        /* --- Preloader Style (شاشة التحميل) --- */
-        #preloader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--dark);
-            z-index: 99999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1); /* تأثير سلايد ناعم */
-        }
-        #preloader.loaded {
-            transform: translateY(-100%); /* سحب الشاشة للأعلى */
-        }
-        .loader-logo {
-            font-size: 40px;
-            font-weight: 900;
-            color: white;
-            margin-bottom: 20px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            animation: fadeIn 1s ease-in;
-        }
+        /* --- Preloader Style --- */
+        #preloader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1); }
+        #preloader.loaded { transform: translateY(-100%); }
+        .loader-logo { font-size: 40px; font-weight: 900; color: white; margin-bottom: 20px; letter-spacing: 2px; text-transform: uppercase; animation: fadeIn 1s ease-in; }
         .loader-logo span { color: var(--primary); }
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.1);
-            border-top: 5px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.1); border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Navbar */
         nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); position: sticky; top: 0; z-index: 1000; }
-        .logo { font-size: 24px; font-weight: 900; color: var(--primary); text-decoration: none; text-transform: uppercase; letter-spacing: 1px; }
+        .logo { font-size: 24px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
         .nav-icons { display: flex; gap: 10px; }
         .icon-btn { position: relative; cursor: pointer; font-size: 20px; background: #f1f5f9; width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--dark); border: none; }
         .icon-btn:hover { background: #e2e8f0; color: var(--primary); }
@@ -149,12 +120,15 @@
         .empty-state span { font-size: 40px; display: block; margin-bottom: 10px; opacity: 0.5; }
 
         .site-footer { background: var(--dark); color: white; padding: 30px 5% 50px; margin-top: 50px; border-radius: 30px 30px 0 0; }
-        .contact-link { display: flex; align-items: center; gap: 10px; color: white; text-decoration: none; margin-bottom: 10px; transition: 0.3s; padding: 10px 15px; background: rgba(255,255,255,0.08); border-radius: 12px; }
+        .footer-logo { text-align:center; margin-bottom:20px; }
+        .contact-link { display: flex; align-items: center; gap: 10px; color: white; text-decoration: none; margin-bottom: 10px; transition: 0.3s; padding: 12px 15px; background: rgba(255,255,255,0.08); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .contact-link:hover { background: rgba(255,255,255,0.15); border-color: var(--primary); transform: translateY(-3px); }
+        .contact-icon { font-size: 22px; width: 30px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <!-- Preloader (شاشة التحميل الاحترافية) -->
+    <!-- Preloader -->
     <div id="preloader">
         <div class="loader-logo">ELSHAMAA <span>STORE</span></div>
         <div class="spinner"></div>
@@ -163,6 +137,7 @@
     <nav>
         <a href="#" class="logo">ELSHAMAA</a>
         <div class="nav-icons">
+            <div class="icon-btn" onclick="window.funcs.openHistory()" title="طلباتي">📦</div>
             <div id="authBtnArea"></div>
         </div>
     </nav>
@@ -194,14 +169,31 @@
     </div>
 
     <footer class="site-footer">
-        <div style="text-align:center; margin-bottom:20px;">
+        <div class="footer-logo">
             <h2 class="logo" style="margin:0 0 10px 0;">ELSHAMAA STORE</h2>
             <p style="color:#94a3b8; font-size:13px;">نسعد بخدمتكم دائماً.</p>
         </div>
-        <a href="https://wa.me/201122884885" target="_blank" class="contact-link">
-            <span style="font-size:22px;">💬</span>
-            <div><div style="font-size:12px; opacity:0.7;">تواصل معنا</div><div style="font-weight:bold; font-size:16px;">WhatsApp</div></div>
-        </a>
+        
+        <div style="display:flex; flex-direction:column; gap:5px;">
+            <a href="tel:01122884885" class="contact-link">
+                <span class="contact-icon">📞</span>
+                <div><div style="font-size:12px; opacity:0.7;">اتصل بنا</div><div style="font-weight:bold; font-size:16px; direction:ltr;">01122884885</div></div>
+            </a>
+            
+            <a href="https://wa.me/201122884885" target="_blank" class="contact-link">
+                <span class="contact-icon">💬</span>
+                <div><div style="font-size:12px; opacity:0.7;">واتساب</div><div style="font-weight:bold; font-size:16px;">WhatsApp</div></div>
+            </a>
+            
+            <a href="https://www.facebook.com" target="_blank" class="contact-link">
+                <span class="contact-icon">📘</span>
+                <div><div style="font-size:12px; opacity:0.7;">تابعنا على</div><div style="font-weight:bold; font-size:16px;">Facebook Page</div></div>
+            </a>
+        </div>
+
+        <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 30px; padding-top: 20px; font-size: 12px; color: #64748b;">
+            &copy; 2024 جميع الحقوق محفوظة لمتجر الشماع.
+        </div>
     </footer>
 
     <div class="bottom-nav">
@@ -330,7 +322,7 @@
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('preloader').classList.add('loaded');
-            }, 2500); // تأخير 2.5 ثانية لإظهار جمال التصميم
+            }, 2500);
         });
 
         window.funcs = {
@@ -715,7 +707,6 @@
                     <div style="width:60px; height:60px; background:var(--dark); color:white; border-radius:50%; margin:0 auto 10px; display:flex; justify-content:center; align-items:center; font-size:24px;">${currentUser.name[0]}</div>
                     <h3 style="margin:0;">${currentUser.name}</h3><small style="color:#64748b;">${currentUser.phone}</small>
                     <button onclick="window.funcs.logout()" style="display:block; margin:10px auto; background:#fee2e2; color:#b91c1c; border:none; padding:5px 15px; border-radius:20px; cursor:pointer; font-size:12px;">تسجيل خروج</button>
-                    <button onclick="window.funcs.openHistory()" style="background:#f1f5f9; color:var(--dark); border:none; padding:8px 20px; border-radius:20px; cursor:pointer; font-size:13px; margin-top:5px;">📦 طلباتي السابقة</button>
                 </div>
                 <h4 style="margin-bottom:10px;">عناويني 📍</h4>
                 <div style="max-height:150px; overflow-y:auto; margin-bottom:15px;">${addrHTML}</div>
@@ -769,6 +760,17 @@
             if(!currentUser) { document.getElementById('loginModal').style.display = 'flex'; return; }
             const list = document.getElementById('historyList'); list.innerHTML = "<div class='empty-state'>جاري التحميل...</div>";
             document.getElementById('historyModal').style.display = 'flex';
+            
+            // قاموس تحويل الحالات للعربية
+            const statusMap = {
+                'pending': 'قيد الانتظار ⏳',
+                'shipped': 'تم الشحن 🚚',
+                'completed': 'مكتمل ✅',
+                'cancelled': 'ملغي ❌',
+                'returned': 'مرتجع ↩️',
+                'cancel_requested': 'طلب إلغاء ⚠️'
+            };
+
             try {
                 const qOrders = query(collection(db, "orders"), where("user.phone", "==", currentUser.phone));
                 const snapOrders = await getDocs(qOrders);
@@ -781,11 +783,11 @@
                 list.innerHTML = "";
                 if(all.length === 0) list.innerHTML = "<div class='empty-state'>لا توجد طلبات سابقة</div>";
                 all.forEach(o => {
-                    let st = o.status === 'pending' ? 'قيد الانتظار ⏳' : (o.status === 'completed' ? 'مكتمل ✅' : (o.status === 'cancelled' ? 'ملغي ❌' : o.status));
+                    let statusText = statusMap[o.status] || o.status;
                     let color = o.status === 'completed' ? '#dcfce7' : (o.status === 'cancelled' ? '#fee2e2' : '#fff7ed');
                     list.innerHTML += `<div style="background:${color}; padding:15px; margin-bottom:10px; border-radius:12px; border:1px solid rgba(0,0,0,0.05);">
                         <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                            <strong>#${o.id.substring(0,6)}</strong> <span style="font-size:12px; font-weight:bold;">${st}</span>
+                            <strong>#${o.id.substring(0,6)}</strong> <span style="font-size:12px; font-weight:bold;">${statusText}</span>
                         </div>
                         <div style="font-size:12px; color:#64748b;">${o.date}</div>
                         <div style="margin-top:5px; font-weight:bold;">${o.total}</div>
