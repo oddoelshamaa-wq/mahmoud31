@@ -2,9 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام إدارة Elshamaa Pro - Enterprise</title>
     <style>
-        /* --- (نفس التنسيقات القديمة تماماً) --- */
         :root { --main: #6366f1; --dark: #1e293b; --light: #f1f5f9; --danger: #ef4444; --green: #10b981; --warning: #f59e0b; }
         :root { --wa-bg: #efe7dd; --wa-header: #008069; --wa-my-msg: #d9fdd3; --wa-their-msg: #ffffff; }
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; transition: all 0.3s ease; }
@@ -42,7 +42,6 @@
         .clickable-row { cursor: pointer; transition: 0.2s; }
         .clickable-row:hover { background-color: #f1f5f9; transform: scale(1.005); }
         .badge { padding: 4px 8px; border-radius: 15px; font-size: 11px; font-weight: bold; color: white; }
-        .bg-badge-gray { background: #94a3b8; }
         .cat-item { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #eee; }
         .delete-btn { background: #fee2e2; color: #ef4444; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .order-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-right: 5px solid var(--main); position: relative; }
@@ -52,7 +51,6 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
         .modal-content { background: white; width: 90%; max-width: 600px; padding: 25px; border-radius: 15px; animation: scaleUp 0.3s; position: relative; max-height: 90vh; overflow-y: auto; }
         @keyframes scaleUp { from{transform:scale(0.8); opacity:0} to{transform:scale(1); opacity:1} }
-        .reset-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 12px; margin-top: 15px; text-decoration: underline; }
         .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; background: #f0f9ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; align-items: flex-end; border: 1px solid #bae6fd; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 150px; }
         .filter-group label { font-size: 12px; font-weight: bold; color: #0284c7; }
@@ -268,14 +266,11 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // --- State Variables ---
     const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg"); 
     let currentUser = null;
     let lastOrderCount = 0;
     let selectedChatUser = null;
-    let chatUnsubscribe = null;
-
-    // Data Containers
+    
     let allProducts = [];
     let allOrders = [];
     let allArchive = [];
@@ -283,7 +278,6 @@
     let allChats = [];
     let categoriesData = {};
 
-    // --- Exposed Functions ---
     window.funcs = {
         login: () => login(),
         logout: () => logout(),
@@ -308,7 +302,6 @@
         sendAdminReply: () => sendAdminReply()
     };
 
-    // --- Initialization ---
     window.addEventListener('load', () => {
         const session = localStorage.getItem('elshamaaSession');
         if(session) grantAccess(JSON.parse(session));
@@ -318,7 +311,6 @@
         const u = document.getElementById('loginUser').value;
         const p = document.getElementById('loginPass').value;
         
-        // Check hardcoded admin first (fallback)
         if(u === "admin" && p === "123") {
             const adminUser = { id: 'master', name: "المدير العام", user: "admin", role: "admin" };
             localStorage.setItem('elshamaaSession', JSON.stringify(adminUser));
@@ -326,7 +318,6 @@
             return;
         }
 
-        // Check Firestore Users
         try {
             const q = query(collection(db, "system_users"), where("user", "==", u), where("pass", "==", p));
             const snap = await getDocs(q);
@@ -361,32 +352,26 @@
         });
     }
 
-    // --- Realtime Listeners (The Power of Firebase) ---
     function startRealtimeListeners() {
-        // 1. Products
         onSnapshot(collection(db, "products"), (snap) => {
             allProducts = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderProducts(); renderStats();
         });
 
-        // 2. Orders (Pending)
         onSnapshot(collection(db, "orders"), (snap) => {
             allOrders = snap.docs.map(d => ({id: d.id, ...d.data()}));
             checkNewOrders(allOrders);
             renderOrders(); renderStats();
         });
 
-        // 3. Archive (Usually heavy, but OK for small biz)
-        // For larger scale, fetch only recent or on demand.
         const qArch = query(collection(db, "archive"), orderBy("timestamp", "desc"));
         onSnapshot(qArch, (snap) => {
             allArchive = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderStats(); // Update stats
+            renderStats();
             if(document.getElementById('archive').classList.contains('active')) renderArchive();
             if(document.getElementById('reports').classList.contains('active')) renderReports();
         });
 
-        // 4. Categories
         onSnapshot(doc(db, "settings", "categories"), (doc) => {
             if(doc.exists()) {
                 categoriesData = doc.data();
@@ -394,7 +379,6 @@
             }
         });
 
-        // 5. System Users (Only for admin)
         if(currentUser.role === 'admin') {
             onSnapshot(collection(db, "system_users"), (snap) => {
                 allUsers = snap.docs.map(d => ({id: d.id, ...d.data()}));
@@ -403,19 +387,15 @@
             });
         }
 
-        // 6. Chats
         onSnapshot(collection(db, "chats"), (snap) => {
             allChats = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderChatList();
             if(selectedChatUser) {
-                // Refresh open chat
                 const c = allChats.find(x => x.id === selectedChatUser);
                 if(c) renderChatBox(c.messages || []);
             }
         });
     }
-
-    // --- Logic Implementation ---
 
     function checkNewOrders(orders) {
         const hasPending = orders.some(o => o.status === 'pending' || o.status === 'cancel_requested');
@@ -426,7 +406,6 @@
         lastOrderCount = orders.length;
     }
 
-    // Products
     async function addProduct() {
         const name = document.getElementById('pName').value;
         const price = document.getElementById('pPrice').value;
@@ -482,7 +461,6 @@
         if(confirm("حذف المنتج؟")) await deleteDoc(doc(db, "products", id));
     }
 
-    // Orders
     function renderOrders() {
         const list = document.getElementById('ordersList');
         list.innerHTML = allOrders.length ? "" : "<p style='text-align:center;color:#999'>لا توجد طلبات نشطة</p>";
@@ -532,19 +510,17 @@
         if(!order) return;
 
         if(status === 'completed' || status === 'cancelled' || status === 'returned') {
-            // Move to Archive
             const archiveData = {
                 ...order,
                 status: status,
                 archiveNote: note,
                 archivedDate: new Date().toLocaleString(),
                 processedBy: currentUser.name,
-                timestamp: Date.now() // Reset timestamp for archive sort
+                timestamp: Date.now()
             };
             await addDoc(collection(db, "archive"), archiveData);
             await deleteDoc(doc(db, "orders", id));
             
-            // Update Sold Count if completed
             if(status === 'completed' && order.items) {
                 order.items.forEach(item => {
                     const p = allProducts.find(x => x.id == item.id);
@@ -553,12 +529,10 @@
             }
 
         } else {
-            // Just update status
             await updateDoc(doc(db, "orders", id), { status: status });
         }
     }
 
-    // Archive & Reports
     function renderArchive() {
         const tbody = document.getElementById('archiveTableBody');
         tbody.innerHTML = "";
@@ -568,7 +542,6 @@
 
         let filtered = allArchive.filter(o => {
             if(emp && o.processedBy !== emp) return false;
-            // Date filtering simplified
             return true; 
         });
 
@@ -583,7 +556,6 @@
     function renderReports() {
         const tbody = document.getElementById('reportsTableBody');
         tbody.innerHTML = "";
-        // Simple aggregation
         let data = {};
         allArchive.forEach(o => {
             if(o.status === 'completed') {
@@ -598,7 +570,6 @@
         });
     }
 
-    // Categories
     function renderCategoryUI() {
         const cats = categoriesData || {};
         const pCat = document.getElementById('pCategory');
@@ -633,7 +604,6 @@
     async function addSubCat() { let m=document.getElementById('targetMainCat').value, s=document.getElementById('newSubCat').value; if(s){ categoriesData[m].push(s); await saveCats(); } }
     async function delSubCat(m,s) { if(confirm("حذف؟")) { categoriesData[m] = categoriesData[m].filter(x=>x!==s); await saveCats(); } }
 
-    // Users
     async function addUser() {
         const uName = document.getElementById('uName').value;
         const uUser = document.getElementById('uUser').value;
@@ -652,7 +622,6 @@
     }
     async function delUser(id) { if(confirm("حذف؟")) await deleteDoc(doc(db, "system_users", id)); }
 
-    // Chat
     function renderChatList() {
         const sidebar = document.getElementById('chatSidebar');
         sidebar.innerHTML = "";
@@ -697,7 +666,6 @@
         document.getElementById('adminChatInput').value = "";
     }
 
-    // Helper: Details Modal
     function openOrderDetailModal(id, src) {
         let order = (src==='active') ? allOrders.find(o=>o.id==id) : allArchive.find(o=>o.id==id);
         if(!order) return;
@@ -721,7 +689,6 @@
         let rev = 0; allArchive.forEach(a=>{if(a.status==='completed') rev += parseFloat(a.total||0)});
         document.getElementById('statRevenue').innerText = rev;
 
-        // Top Sellers
         let counts = {};
         allProducts.forEach(p => counts[p.name] = (p.sold||0));
         const list = document.getElementById('topSellersList'); list.innerHTML = "";
@@ -730,7 +697,6 @@
         });
     }
     
-    // Helpers
     function showSection(id, btn) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
