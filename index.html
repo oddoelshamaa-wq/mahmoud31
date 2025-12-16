@@ -61,7 +61,7 @@
         .toast.show { opacity: 1; bottom: 40px; }
         .address-card { border: 2px solid #eee; padding: 10px; border-radius: 10px; margin-bottom: 10px; cursor: pointer; position: relative; }
         .address-card.selected { border-color: var(--primary); background: #f0fdf4; }
-        .btn-gps { width: 100%; padding: 10px; background: #e0f2fe; color: #0284c7; border: 1px dashed #0284c7; border-radius: 8px; cursor: pointer; margin-bottom: 10px; }
+        .btn-gps { width: 100%; padding: 10px; background: #e0f2fe; color: #0284c7; border: 1px dashed #0284c7; border-radius: 8px; cursor: pointer; margin-bottom: 10px; transition: 0.3s; }
         .detail-img { width: 100%; height: 250px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; }
         .qty-box { display: flex; align-items: center; gap: 10px; background: #eee; padding: 5px; border-radius: 10px; width: fit-content; margin: 15px 0; }
         .qty-btn { width: 30px; height: 30px; border: none; background: white; border-radius: 5px; cursor: pointer; }
@@ -390,7 +390,6 @@
         }
 
         function selectOption(type, val, btn) {
-            // Remove active from siblings
             let parent = btn.parentElement;
             parent.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
@@ -410,7 +409,6 @@
         function addToCartFromModal() {
             if(!currentProductInModal) return;
 
-            // Check options
             if(currentProductInModal.colors && currentProductInModal.colors.length > 0 && !selectedColor) {
                 alert("برجاء اختيار اللون"); return;
             }
@@ -420,7 +418,6 @@
 
             let qty = parseInt(document.getElementById('modalQty').value);
             for(let i=0; i<qty; i++) {
-                // Clone product to add selected options
                 let item = { ...currentProductInModal, selectedColor: selectedColor, selectedSize: selectedSize, cartId: Date.now() + Math.random() };
                 cart.push(item);
             }
@@ -428,7 +425,7 @@
         }
 
         function addToCart(id) {
-            window.funcs.openProductDetails(id); // Force open details to select options
+            window.funcs.openProductDetails(id); 
         }
 
         function saveCart() {
@@ -448,8 +445,6 @@
             
             if(cart.length === 0) list.innerHTML = "<p style='text-align:center; color:#999; padding:20px;'>السلة فارغة</p>";
             
-            // Group logic needs to handle variants, so simple list is safer for now or sophisticated grouping
-            // Showing raw list for simplicity with options
             cart.forEach((i, idx) => {
                 let price = (i.discountPrice && i.discountPrice > 0) ? parseFloat(i.discountPrice) : parseFloat(i.price);
                 total += price;
@@ -485,7 +480,6 @@
             }
             if(!addrStr) return alert("اختر عنواناً");
 
-            // التحقق المبدئي من توفر الكميات
             let itemCounts = {};
             cart.forEach(item => {
                 itemCounts[item.id] = (itemCounts[item.id] || 0) + 1;
@@ -511,14 +505,10 @@
             };
 
             try {
-                // استخدام Batch لضمان تنفيذ العمليات معاً (إنشاء الطلب + خصم المخزون)
                 const batch = writeBatch(db);
-
-                // 1. إنشاء وثيقة الطلب
                 const newOrderRef = doc(collection(db, "orders"));
                 batch.set(newOrderRef, orderData);
 
-                // 2. خصم الكمية لكل منتج في السلة
                 cart.forEach(item => {
                     const productRef = doc(db, "products", item.id);
                     batch.update(productRef, { 
@@ -527,7 +517,6 @@
                     });
                 });
 
-                // 3. تنفيذ العملية
                 await batch.commit();
 
                 cart = []; 
@@ -638,15 +627,51 @@
 
         function detectLoc() {
             const btn = document.querySelector('.btn-gps');
-            if(!navigator.geolocation) return alert("غير مدعوم");
-            btn.innerHTML = "جاري التحديد...";
-            navigator.geolocation.getCurrentPosition(pos => {
+            const detailInput = document.getElementById('addrDetail');
+            
+            if(!navigator.geolocation) return alert("المتصفح لا يدعم تحديد الموقع");
+            
+            btn.innerHTML = "📡 جاري جلب العنوان...";
+            btn.style.opacity = "0.7";
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
                 const {latitude: lat, longitude: lon} = pos.coords;
                 tempMapLink = `https://maps.google.com/?q=${lat},${lon}`;
-                document.getElementById('addrDetail').value = `موقع GPS: ${lat}, ${lon}`;
-                btn.innerHTML = "✅ تم التحديد";
-                btn.style.background = "#dcfce7";
-            }, () => { alert("فشل تحديد الموقع"); btn.innerHTML = "📍 تحديد موقعي"; });
+                
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ar`);
+                    const data = await response.json();
+                    
+                    if(data && data.display_name) {
+                        detailInput.value = data.display_name;
+                    } else {
+                        detailInput.value = tempMapLink;
+                    }
+                    
+                    btn.innerHTML = "✅ تم تحديد موقعك بدقة";
+                    btn.style.background = "#dcfce7";
+                    btn.style.color = "#166534";
+                    
+                } catch (error) {
+                    console.error(error);
+                    detailInput.value = tempMapLink; 
+                    btn.innerHTML = "📍 تم تحديد الإحداثيات";
+                }
+                
+                btn.style.opacity = "1";
+
+            }, (err) => { 
+                console.error(err);
+                let msg = "فشل تحديد الموقع";
+                if(err.code === 1) msg = "الرجاء السماح بتحديد الموقع من إعدادات المتصفح";
+                alert(msg); 
+                btn.innerHTML = "📍 تحديد موقعي (GPS)";
+                btn.style.opacity = "1";
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
         }
 
         async function openHistory() {
