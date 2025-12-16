@@ -70,6 +70,10 @@
         .footer-content { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; }
         .contact-link { display: flex; align-items: center; gap: 10px; color: white; text-decoration: none; margin-bottom: 10px; transition: 0.3s; padding: 8px 15px; background: rgba(255,255,255,0.05); border-radius: 10px; }
         .contact-link:hover { background: rgba(255,255,255,0.1); transform: translateX(-5px); color: var(--primary); }
+        .option-group { margin: 15px 0; }
+        .option-title { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; }
+        .option-btn { border: 1px solid #ccc; background: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 5px; font-size: 12px; }
+        .option-btn.selected { background: var(--dark); color: white; border-color: var(--dark); }
     </style>
 </head>
 <body>
@@ -209,18 +213,15 @@
 
         let currentUser = JSON.parse(localStorage.getItem('elshamaaUser')); 
         let cart = JSON.parse(localStorage.getItem('elshamaaCart')) || [];
-        let categoriesData = {
-            "تكنولوجيا": ["موبايلات", "لابتوب", "اكسسوارات"],
-            "ملابس": ["رجالي", "حريمي", "أطفال"],
-            "منزل": ["أثاث", "ديكور"],
-            "عطور": []
-        };
+        let categoriesData = { "عام": [] };
         let allProducts = [];
         let currentCat = 'all';
         let currentSub = 'all';
         let selectedAddressId = null;
         let tempMapLink = "";
         let currentProductInModal = null;
+        let selectedColor = null;
+        let selectedSize = null;
         let chatUnsubscribe = null;
 
         window.funcs = {
@@ -243,7 +244,8 @@
             delAddr: (i) => delAddr(i),
             setCat: (cat, btn) => setCat(cat, btn),
             setSub: (sub, btn) => setSub(sub, btn),
-            logout: () => logout()
+            logout: () => logout(),
+            selectOption: (type, val, btn) => selectOption(type, val, btn)
         };
 
         async function init() {
@@ -332,7 +334,7 @@
                         <span class="cat-label">${p.category}</span>
                         <h3>${p.name}</h3>
                         ${priceHTML}
-                        ${p.quantity > 0 ? `<button class="btn-add" onclick="event.stopPropagation(); window.funcs.addToCart('${p.id}')"><span>أضف للسلة</span> 🛒</button>` : `<button class="btn-add" style="background:#cbd5e1; cursor:not-allowed;" disabled>غير متاح</button>`}
+                        ${p.quantity > 0 ? `<button class="btn-add" onclick="event.stopPropagation(); window.funcs.openProductDetails('${p.id}')"><span>أضف للسلة</span> 🛒</button>` : `<button class="btn-add" style="background:#cbd5e1; cursor:not-allowed;" disabled>غير متاح</button>`}
                     </div>
                 </div>`;
             });
@@ -342,6 +344,9 @@
             const p = allProducts.find(x => x.id == id);
             if(!p) return;
             currentProductInModal = p;
+            selectedColor = null;
+            selectedSize = null;
+
             const content = document.getElementById('productModalContent');
             let imgUrl = p.image || p.img || "https://via.placeholder.com/300";
             let desc = p.description || p.desc || "منتج عالي الجودة من متجر الشماع.";
@@ -350,10 +355,27 @@
                 priceDisplay = `<span class="price" style="font-size:24px; color:red;">${p.discountPrice} ج.م</span> <span class="old-price" style="font-size:16px;">${p.price} ج.م</span>`;
             }
 
+            // Options logic
+            let colorHtml = '';
+            if(p.colors && p.colors.length > 0) {
+                colorHtml = `<div class="option-group"><span class="option-title">اللون:</span>` +
+                    p.colors.map(c => `<button class="option-btn" onclick="window.funcs.selectOption('color', '${c}', this)">${c}</button>`).join('') +
+                    `</div>`;
+            }
+
+            let sizeHtml = '';
+            if(p.sizes && p.sizes.length > 0) {
+                sizeHtml = `<div class="option-group"><span class="option-title">المقاس:</span>` +
+                    p.sizes.map(s => `<button class="option-btn" onclick="window.funcs.selectOption('size', '${s}', this)">${s}</button>`).join('') +
+                    `</div>`;
+            }
+
             content.innerHTML = `
                 <img src="${imgUrl}" class="detail-img">
                 <h2 style="margin:0 0 10px 0;">${p.name}</h2>
                 <div style="margin-bottom:15px;">${priceDisplay}</div>
+                ${colorHtml}
+                ${sizeHtml}
                 <p style="background:#f9f9f9; padding:15px; border-radius:10px; color:#555; line-height:1.6;">${desc}</p>
                 ${p.quantity > 0 ? `
                 <div class="qty-box">
@@ -367,6 +389,16 @@
             document.getElementById('productModal').style.display = 'flex';
         }
 
+        function selectOption(type, val, btn) {
+            // Remove active from siblings
+            let parent = btn.parentElement;
+            parent.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            if(type === 'color') selectedColor = val;
+            if(type === 'size') selectedSize = val;
+        }
+
         function changeModalQty(d) {
             let el = document.getElementById('modalQty');
             let val = parseInt(el.value) + d;
@@ -377,14 +409,26 @@
 
         function addToCartFromModal() {
             if(!currentProductInModal) return;
+
+            // Check options
+            if(currentProductInModal.colors && currentProductInModal.colors.length > 0 && !selectedColor) {
+                alert("برجاء اختيار اللون"); return;
+            }
+            if(currentProductInModal.sizes && currentProductInModal.sizes.length > 0 && !selectedSize) {
+                alert("برجاء اختيار المقاس"); return;
+            }
+
             let qty = parseInt(document.getElementById('modalQty').value);
-            for(let i=0; i<qty; i++) cart.push(currentProductInModal);
+            for(let i=0; i<qty; i++) {
+                // Clone product to add selected options
+                let item = { ...currentProductInModal, selectedColor: selectedColor, selectedSize: selectedSize, cartId: Date.now() + Math.random() };
+                cart.push(item);
+            }
             saveCart(); window.funcs.closeModal('productModal'); showToast();
         }
 
         function addToCart(id) {
-            const p = allProducts.find(x => x.id == id);
-            if(p) { cart.push(p); saveCart(); showToast(); }
+            window.funcs.openProductDetails(id); // Force open details to select options
         }
 
         function saveCart() {
@@ -400,24 +444,23 @@
 
         function openCart() {
             const list = document.getElementById('cartItems'); list.innerHTML = "";
-            let total = 0; let grouped = {};
-            cart.forEach(i => {
-                if(!grouped[i.id]) grouped[i.id] = {...i, count:0};
-                grouped[i.id].count++;
-                let price = (i.discountPrice && i.discountPrice > 0) ? parseFloat(i.discountPrice) : parseFloat(i.price);
-                total += price * 1; 
-            });
-
-            if(Object.keys(grouped).length === 0) list.innerHTML = "<p style='text-align:center; color:#999; padding:20px;'>السلة فارغة</p>";
+            let total = 0;
             
-            Object.values(grouped).forEach(i => {
+            if(cart.length === 0) list.innerHTML = "<p style='text-align:center; color:#999; padding:20px;'>السلة فارغة</p>";
+            
+            // Group logic needs to handle variants, so simple list is safer for now or sophisticated grouping
+            // Showing raw list for simplicity with options
+            cart.forEach((i, idx) => {
                 let price = (i.discountPrice && i.discountPrice > 0) ? parseFloat(i.discountPrice) : parseFloat(i.price);
+                total += price;
+                let details = (i.selectedColor || i.selectedSize) ? `<small style="color:#666">(${i.selectedColor || '-'} | ${i.selectedSize || '-'})</small>` : '';
+
                 list.innerHTML += `
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:10px 0;">
-                        <div><strong>${i.name}</strong><br><small>العدد: ${i.count}</small></div>
+                        <div><strong>${i.name}</strong> ${details}</div>
                         <div style="text-align:left;">
-                            <div style="font-weight:bold; color:var(--primary);">${price * i.count}</div>
-                            <small style="color:red; cursor:pointer;" onclick="window.funcs.remCart('${i.id}')">حذف</small>
+                            <div style="font-weight:bold; color:var(--primary);">${price}</div>
+                            <small style="color:red; cursor:pointer;" onclick="window.funcs.remCart(${idx})">حذف</small>
                         </div>
                     </div>`;
             });
@@ -426,9 +469,8 @@
             document.getElementById('cartModal').style.display = 'flex';
         }
 
-        function remCart(id) {
-            let idx = cart.findIndex(c => c.id == id);
-            if(idx > -1) cart.splice(idx, 1);
+        function remCart(idx) {
+            cart.splice(idx, 1);
             saveCart(); openCart();
         }
 
