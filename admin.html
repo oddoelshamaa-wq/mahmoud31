@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة Elshamaa Pro - Enterprise</title>
+    <title>نظام إدارة Elshamaa Pro</title>
     <style>
         :root { --main: #6366f1; --dark: #1e293b; --light: #f1f5f9; --danger: #ef4444; --green: #10b981; --warning: #f59e0b; }
         :root { --wa-bg: #efe7dd; --wa-header: #008069; --wa-my-msg: #d9fdd3; --wa-their-msg: #ffffff; }
@@ -151,6 +151,10 @@
                 <input type="number" id="pDiscount" placeholder="السعر بعد الخصم (اختياري)" style="flex:1; border-color:var(--warning)">
                 <input type="number" id="pQty" placeholder="الكمية" style="flex:1">
             </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                <input type="text" id="pColors" placeholder="الألوان المتاحة (افصل بفاصلة مثل: أحمر,أزرق)" style="flex:1">
+                <input type="text" id="pSizes" placeholder="المقاسات المتاحة (افصل بفاصلة مثل: L,XL,M)" style="flex:1">
+            </div>
             <textarea id="pDesc" placeholder="اكتب وصف المنتج وتفاصيله هنا..." rows="3"></textarea>
             <input type="text" id="pImg" placeholder="رابط صورة المنتج (https://...)" style="width:100%; direction:ltr;">
             <div style="display:flex; gap:10px;">
@@ -162,7 +166,7 @@
         <div class="card">
             <h3>📋 جدول المخزون</h3>
             <div style="overflow-x:auto;">
-                <table id="productsTable"><thead><tr><th>صورة</th><th>المنتج</th><th>الوصف</th><th>القسم</th><th>السعر</th><th>الكمية</th><th>تحكم</th></tr></thead><tbody id="productsTableBody"></tbody></table>
+                <table id="productsTable"><thead><tr><th>صورة</th><th>المنتج</th><th>ألوان/مقاسات</th><th>القسم</th><th>السعر</th><th>الكمية</th><th>تحكم</th></tr></thead><tbody id="productsTableBody"></tbody></table>
             </div>
         </div>
     </div>
@@ -415,16 +419,25 @@
         const sub = document.getElementById('pSubCategory').value;
         const desc = document.getElementById('pDesc').value;
         const img = document.getElementById('pImg').value;
+        const colorsStr = document.getElementById('pColors').value;
+        const sizesStr = document.getElementById('pSizes').value;
 
         if(!name || !price) return alert("الاسم والسعر مطلوبان");
 
+        // Convert strings to arrays
+        const colors = colorsStr ? colorsStr.split(',').map(s => s.trim()) : [];
+        const sizes = sizesStr ? sizesStr.split(',').map(s => s.trim()) : [];
+
         await addDoc(collection(db, "products"), {
             name, price, discountPrice: discount, quantity: parseInt(qty), 
-            category: cat, subCategory: sub, description: desc, img, sold: 0
+            category: cat, subCategory: sub, description: desc, img, sold: 0,
+            colors: colors, sizes: sizes
         });
 
         document.getElementById('pName').value = "";
         document.getElementById('pPrice').value = "";
+        document.getElementById('pColors').value = "";
+        document.getElementById('pSizes').value = "";
         alert("تمت الإضافة");
     }
 
@@ -434,10 +447,15 @@
         allProducts.forEach((p) => { 
             let priceDisplay = `${p.price}`;
             if(p.discountPrice) priceDisplay = `<span class="old-price">${p.price}</span> <span class="new-price">${p.discountPrice}</span>`;
+            
+            let variants = "";
+            if(p.colors && p.colors.length) variants += `🎨: ${p.colors.join(',')}<br>`;
+            if(p.sizes && p.sizes.length) variants += `📏: ${p.sizes.join(',')}`;
+
             tbody.innerHTML += `<tr>
                 <td><img src="${p.img || 'https://placehold.co/50'}" style="width:50px;"></td>
                 <td>${p.name}</td>
-                <td>${(p.description||'').substring(0,20)}...</td>
+                <td><small>${variants}</small></td>
                 <td>${p.category}</td>
                 <td>${priceDisplay}</td>
                 <td>${p.quantity} <button class="action-btn" style="padding:2px 5px;" onclick="window.funcs.changeStock('${p.id}')">✏️</button></td>
@@ -465,7 +483,11 @@
         const list = document.getElementById('ordersList');
         list.innerHTML = allOrders.length ? "" : "<p style='text-align:center;color:#999'>لا توجد طلبات نشطة</p>";
         allOrders.sort((a,b)=>b.timestamp - a.timestamp).forEach(o => {
-            let items = o.items ? o.items.map(i=>i.name).join('+') : o.productName;
+            let items = o.items ? o.items.map(i => {
+                let det = i.selectedColor || i.selectedSize ? `(${i.selectedColor||''} ${i.selectedSize||''})` : '';
+                return `${i.name} ${det}`;
+            }).join(' + ') : o.productName;
+            
             let options = '';
             let extraStyle = '';
 
@@ -670,7 +692,11 @@
         let order = (src==='active') ? allOrders.find(o=>o.id==id) : allArchive.find(o=>o.id==id);
         if(!order) return;
         let content = document.getElementById('orderDetailContent');
-        let itemsHtml = (order.items || []).map(i => `<li>${i.name} (${i.price})</li>`).join('');
+        let itemsHtml = (order.items || []).map(i => {
+            let detail = (i.selectedColor || i.selectedSize) ? `<br><small style="color:#666">(${i.selectedColor || '-'} | ${i.selectedSize || '-'})</small>` : '';
+            return `<li>${i.name} ${detail} <span style="float:left">${i.price}</span></li>`;
+        }).join('');
+        
         content.innerHTML = `
             <strong>العميل:</strong> ${order.user?.name}<br>
             <strong>الهاتف:</strong> ${order.user?.phone}<br>
