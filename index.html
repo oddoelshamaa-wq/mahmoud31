@@ -6,7 +6,6 @@
     <title>Elshamaa Store | تجربة تسوق عصرية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- (نفس التنسيقات القديمة تماماً - لم يتم الحذف) --- */
         :root { --primary: #00a884; --primary-dark: #007a5e; --accent: #25d366; --dark: #0f172a; --gray: #64748b; --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%); --danger: #ef4444; --warning: #f59e0b; }
         body { font-family: 'Cairo', sans-serif; background: var(--bg-gradient); margin: 0; padding-bottom: 80px; color: var(--dark); min-height: 100vh; }
         * { box-sizing: border-box; outline: none; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -125,7 +124,6 @@
         </div>
     </footer>
 
-    <!-- Chat -->
     <div class="chat-fab" onclick="window.funcs.toggleChat()">💬</div>
     <div class="chat-window" id="chatWindow">
         <div class="chat-header">
@@ -140,10 +138,8 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast" class="toast">✅ تمت الإضافة للسلة بنجاح</div>
 
-    <!-- Modals -->
     <div class="modal-overlay" id="productModal">
         <div class="modal-card">
             <button class="close-btn" onclick="window.funcs.closeModal('productModal')">&times;</button>
@@ -194,7 +190,6 @@
         </div>
     </div>
 
-    <!-- Firebase Script Configuration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, doc, setDoc, getDoc, updateDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -212,10 +207,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- Global Variables ---
         let currentUser = JSON.parse(localStorage.getItem('elshamaaUser')); 
         let cart = JSON.parse(localStorage.getItem('elshamaaCart')) || [];
-        // Categories default to ensure something shows if DB empty
         let categoriesData = {
             "تكنولوجيا": ["موبايلات", "لابتوب", "اكسسوارات"],
             "ملابس": ["رجالي", "حريمي", "أطفال"],
@@ -230,7 +223,6 @@
         let currentProductInModal = null;
         let chatUnsubscribe = null;
 
-        // --- Functions Exposed to Window ---
         window.funcs = {
             openProfile: () => openProfile(),
             openHistory: () => openHistory(),
@@ -254,16 +246,14 @@
             logout: () => logout()
         };
 
-        // --- Init ---
         async function init() {
             await fetchCategories();
             renderCategories(); 
-            fetchProducts(); // Async
+            fetchProducts(); 
             updateUI();
             if(currentUser) listenToChat();
         }
 
-        // --- Firebase Data Fetching ---
         async function fetchCategories() {
             try {
                 const docRef = doc(db, "settings", "categories");
@@ -271,7 +261,6 @@
                 if (docSnap.exists()) {
                     categoriesData = docSnap.data();
                 } else {
-                    // Initialize if not exists
                     await setDoc(docRef, categoriesData);
                 }
             } catch (e) { console.error("Error fetching cats:", e); }
@@ -285,7 +274,6 @@
             });
         }
 
-        // --- Rendering Logic ---
         function renderCategories() {
             const strip = document.getElementById('catStrip');
             strip.innerHTML = '<button class="cat-btn active" onclick="window.funcs.setCat(\'all\', this)">الكل</button>';
@@ -410,7 +398,6 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         }
 
-        // --- Cart Logic ---
         function openCart() {
             const list = document.getElementById('cartItems'); list.innerHTML = "";
             let total = 0; let grouped = {};
@@ -418,7 +405,7 @@
                 if(!grouped[i.id]) grouped[i.id] = {...i, count:0};
                 grouped[i.id].count++;
                 let price = (i.discountPrice && i.discountPrice > 0) ? parseFloat(i.discountPrice) : parseFloat(i.price);
-                total += price * 1; // 1 item
+                total += price * 1; 
             });
 
             if(Object.keys(grouped).length === 0) list.innerHTML = "<p style='text-align:center; color:#999; padding:20px;'>السلة فارغة</p>";
@@ -468,12 +455,7 @@
             };
 
             try {
-                // Add to Firestore
                 await addDoc(collection(db, "orders"), orderData);
-
-                // Reduce stock locally is not enough, should be handled by admin or cloud function, 
-                // but for this structure we just clear cart. Real stock update happens in Admin.
-                
                 cart = []; saveCart();
                 window.funcs.closeModal('cartModal'); 
                 alert("تم الطلب بنجاح! 🎉"); 
@@ -492,7 +474,6 @@
             if(!selectedAddressId && currentUser.addresses.length > 0) selectedAddressId = currentUser.addresses[0].id;
             currentUser.addresses.forEach(addr => {
                 let isSel = selectedAddressId === addr.id;
-                // Using a closure to handle click
                 const div = document.createElement('div');
                 div.className = `address-card ${isSel ? 'selected' : ''}`;
                 div.innerHTML = `<strong>${addr.title}</strong><p style="margin:0; font-size:12px;">${addr.details}</p>`;
@@ -501,7 +482,6 @@
             });
         }
 
-        // --- Auth & Profile ---
         async function login() {
             let n = document.getElementById('loginName').value;
             let p = document.getElementById('loginPhone').value;
@@ -512,7 +492,6 @@
                     if(snap.exists()) {
                         currentUser = snap.data();
                     } else {
-                        // New user
                         currentUser = { name: n, phone: p, addresses: [] };
                         await setDoc(userRef, currentUser);
                     }
@@ -594,20 +573,16 @@
             }, () => { alert("فشل تحديد الموقع"); btn.innerHTML = "📍 تحديد موقعي"; });
         }
 
-        // --- History ---
         async function openHistory() {
             if(!currentUser) { document.getElementById('loginModal').style.display = 'flex'; return; }
             const list = document.getElementById('historyList'); list.innerHTML = "<p>جاري التحميل...</p>";
             document.getElementById('historyModal').style.display = 'flex';
 
-            // Get both active orders and archive
             try {
-                // 1. Active Orders
                 const qOrders = query(collection(db, "orders"), where("user.phone", "==", currentUser.phone));
                 const snapOrders = await getDocs(qOrders);
                 let myOrders = snapOrders.docs.map(d => ({id: d.id, ...d.data(), type: 'active'}));
 
-                // 2. Archive
                 const qArch = query(collection(db, "archive"), where("user.phone", "==", currentUser.phone));
                 const snapArch = await getDocs(qArch);
                 let myArch = snapArch.docs.map(d => ({id: d.id, ...d.data(), type: 'archive'}));
@@ -642,7 +617,6 @@
             }
         }
 
-        // --- Chat ---
         function toggleChat() {
             const w = document.getElementById('chatWindow');
             if(!currentUser) { document.getElementById('loginModal').style.display = 'flex'; return; }
