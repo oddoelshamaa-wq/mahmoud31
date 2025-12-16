@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة Elshamaa Pro</title>
+    <title>نظام إدارة Elshamaa Pro - Enterprise</title>
     <style>
         :root { --main: #6366f1; --dark: #1e293b; --light: #f1f5f9; --danger: #ef4444; --green: #10b981; --warning: #f59e0b; }
         :root { --wa-bg: #efe7dd; --wa-header: #008069; --wa-my-msg: #d9fdd3; --wa-their-msg: #ffffff; }
@@ -70,6 +70,16 @@
         .chat-input-area { padding: 10px; background: #f0f2f5; display: flex; align-items: center; gap: 10px; }
         .chat-input-area input { margin: 0; border-radius: 20px; border: none; padding: 12px 20px; flex: 1; }
         .chat-input-area button { margin: 0; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 20px; }
+
+        /* ستايل أزرار الاختيار الجديدة */
+        .option-container { margin-bottom: 15px; }
+        .option-label { font-weight: bold; display: block; margin-bottom: 8px; font-size: 14px; color: #334155; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chk-btn {
+            border: 1px solid #cbd5e1; background: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; user-select: none; transition: 0.2s;
+        }
+        .chk-btn:hover { background: #f1f5f9; }
+        .chk-btn.active { background: var(--main); color: white; border-color: var(--main); box-shadow: 0 2px 5px rgba(99, 102, 241, 0.4); }
     </style>
 </head>
 <body>
@@ -151,10 +161,23 @@
                 <input type="number" id="pDiscount" placeholder="السعر بعد الخصم (اختياري)" style="flex:1; border-color:var(--warning)">
                 <input type="number" id="pQty" placeholder="الكمية" style="flex:1">
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-                <input type="text" id="pColors" placeholder="الألوان المتاحة (افصل بفاصلة مثل: أحمر,أزرق)" style="flex:1">
-                <input type="text" id="pSizes" placeholder="المقاسات المتاحة (افصل بفاصلة مثل: L,XL,M)" style="flex:1">
+
+            <!-- New Options UI -->
+            <div style="background:#f8fafc; padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #eee;">
+                <div class="option-container">
+                    <span class="option-label">🎨 اختر الألوان المتاحة:</span>
+                    <div id="colorContainer" class="checkbox-group">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+                <div class="option-container" style="margin-bottom:0;">
+                    <span class="option-label">📏 اختر المقاسات المتاحة:</span>
+                    <div id="sizeContainer" class="checkbox-group">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
             </div>
+
             <textarea id="pDesc" placeholder="اكتب وصف المنتج وتفاصيله هنا..." rows="3"></textarea>
             <input type="text" id="pImg" placeholder="رابط صورة المنتج (https://...)" style="width:100%; direction:ltr;">
             <div style="display:flex; gap:10px;">
@@ -282,6 +305,10 @@
     let allChats = [];
     let categoriesData = {};
 
+    // Defined Options
+    const commonColors = ["أسود", "أبيض", "أحمر", "أزرق", "أخضر", "أصفر", "رصاصي", "بيج", "كحلي", "بني", "ذهبي", "فضي", "وردي"];
+    const commonSizes = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "38", "39", "40", "41", "42", "43", "44", "45"];
+
     window.funcs = {
         login: () => login(),
         logout: () => logout(),
@@ -303,13 +330,34 @@
         changeStock: (id) => changeStock(id),
         delProd: (id) => delProd(id),
         openChat: (p) => openChat(p),
-        sendAdminReply: () => sendAdminReply()
+        sendAdminReply: () => sendAdminReply(),
+        toggleOption: (btn) => toggleOption(btn)
     };
 
     window.addEventListener('load', () => {
         const session = localStorage.getItem('elshamaaSession');
         if(session) grantAccess(JSON.parse(session));
+        renderOptions();
     });
+
+    // Toggle Checkbox Button
+    function toggleOption(btn) {
+        btn.classList.toggle('active');
+    }
+
+    function renderOptions() {
+        const cContainer = document.getElementById('colorContainer');
+        const sContainer = document.getElementById('sizeContainer');
+        cContainer.innerHTML = ""; sContainer.innerHTML = "";
+
+        commonColors.forEach(c => {
+            cContainer.innerHTML += `<div class="chk-btn" onclick="window.funcs.toggleOption(this)" data-val="${c}">${c}</div>`;
+        });
+
+        commonSizes.forEach(s => {
+            sContainer.innerHTML += `<div class="chk-btn" onclick="window.funcs.toggleOption(this)" data-val="${s}">${s}</div>`;
+        });
+    }
 
     async function login() {
         const u = document.getElementById('loginUser').value;
@@ -419,25 +467,25 @@
         const sub = document.getElementById('pSubCategory').value;
         const desc = document.getElementById('pDesc').value;
         const img = document.getElementById('pImg').value;
-        const colorsStr = document.getElementById('pColors').value;
-        const sizesStr = document.getElementById('pSizes').value;
+
+        // Get selected colors and sizes
+        const selectedColors = Array.from(document.querySelectorAll('#colorContainer .chk-btn.active')).map(el => el.dataset.val);
+        const selectedSizes = Array.from(document.querySelectorAll('#sizeContainer .chk-btn.active')).map(el => el.dataset.val);
 
         if(!name || !price) return alert("الاسم والسعر مطلوبان");
-
-        // Convert strings to arrays
-        const colors = colorsStr ? colorsStr.split(',').map(s => s.trim()) : [];
-        const sizes = sizesStr ? sizesStr.split(',').map(s => s.trim()) : [];
 
         await addDoc(collection(db, "products"), {
             name, price, discountPrice: discount, quantity: parseInt(qty), 
             category: cat, subCategory: sub, description: desc, img, sold: 0,
-            colors: colors, sizes: sizes
+            colors: selectedColors, sizes: selectedSizes
         });
 
+        // Reset Form
         document.getElementById('pName').value = "";
         document.getElementById('pPrice').value = "";
-        document.getElementById('pColors').value = "";
-        document.getElementById('pSizes').value = "";
+        // Reset checkboxes
+        document.querySelectorAll('.chk-btn.active').forEach(b => b.classList.remove('active'));
+        
         alert("تمت الإضافة");
     }
 
@@ -449,8 +497,8 @@
             if(p.discountPrice) priceDisplay = `<span class="old-price">${p.price}</span> <span class="new-price">${p.discountPrice}</span>`;
             
             let variants = "";
-            if(p.colors && p.colors.length) variants += `🎨: ${p.colors.join(',')}<br>`;
-            if(p.sizes && p.sizes.length) variants += `📏: ${p.sizes.join(',')}`;
+            if(p.colors && p.colors.length) variants += `🎨: ${p.colors.join(' ')}<br>`;
+            if(p.sizes && p.sizes.length) variants += `📏: ${p.sizes.join(' ')}`;
 
             tbody.innerHTML += `<tr>
                 <td><img src="${p.img || 'https://placehold.co/50'}" style="width:50px;"></td>
